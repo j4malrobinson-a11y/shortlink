@@ -10,7 +10,7 @@ import lombok.Data;
  * 用户参数响应
  */
 @Data
-public class UserRespDTO {
+public class UserActualRespDTO {
 
 
 
