@@ -6,6 +6,7 @@ import com.nageoffer.shortlink.admin.common.convention.result.Results;
 import com.nageoffer.shortlink.admin.dto.resp.UserActualRespDTO;
 import com.nageoffer.shortlink.admin.dto.resp.UserRegisterReqDTO;
 import com.nageoffer.shortlink.admin.dto.resp.UserRespDTO;
+import com.nageoffer.shortlink.admin.dto.resp.UserUpdateReqDTO;
 import com.nageoffer.shortlink.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
@@ -39,6 +40,12 @@ public class UserController {
     @PostMapping("/api/shortlink/v1/user")
     public Result<Void> register(@RequestBody UserRegisterReqDTO requestParam){
         userService.register(requestParam);
+        return Results.success();
+    }
+
+    @PutMapping("/api/shortlink/v1/user")
+    public Result<Void> update(@RequestBody UserUpdateReqDTO requestRaram){
+        userService.update(requestRaram);
         return Results.success();
     }
 }
