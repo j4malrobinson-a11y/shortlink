@@ -2,9 +2,11 @@ package com.nageoffer.shortlink.admin.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.nageoffer.shortlink.admin.dao.entity.UserDO;
-import com.nageoffer.shortlink.admin.dto.resp.UserRegisterReqDTO;
+import com.nageoffer.shortlink.admin.dto.req.UserLoginReqDTO;
+import com.nageoffer.shortlink.admin.dto.req.UserRegisterReqDTO;
+import com.nageoffer.shortlink.admin.dto.req.UserUpdateReqDTO;
+import com.nageoffer.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.nageoffer.shortlink.admin.dto.resp.UserRespDTO;
-import com.nageoffer.shortlink.admin.dto.resp.UserUpdateReqDTO;
 
 /**
  * 用户接口层
@@ -21,4 +23,10 @@ public interface UserService extends IService<UserDO> {
     void register(UserRegisterReqDTO requestParam);
 
     void update(UserUpdateReqDTO requestRaram);
+
+    UserLoginRespDTO login(UserLoginReqDTO requestparam);
+
+    Boolean checkLogin(String token);
+
+    void logout(String token, String username);
 }
