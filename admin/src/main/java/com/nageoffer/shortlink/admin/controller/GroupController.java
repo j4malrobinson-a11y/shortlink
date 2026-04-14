@@ -3,11 +3,15 @@ package com.nageoffer.shortlink.admin.controller;
 import com.nageoffer.shortlink.admin.common.convention.result.Result;
 import com.nageoffer.shortlink.admin.common.convention.result.Results;
 import com.nageoffer.shortlink.admin.dto.req.ShortlinkGroupSaveReqDTO;
+import com.nageoffer.shortlink.admin.dto.resp.ShortLinkGroupListRespDTO;
 import com.nageoffer.shortlink.admin.service.GroupService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,5 +23,10 @@ public class GroupController {
     public Result<Void> save(@RequestBody ShortlinkGroupSaveReqDTO requestparam) {
         groupService.saveGroup(requestparam.getName());
         return Results.success();
+    }
+
+    @GetMapping("/api/shortlink/v1/group")
+    public Result<List<ShortLinkGroupListRespDTO>> listGroup() {
+        return Results.success(groupService.listGroup());
     }
 }
