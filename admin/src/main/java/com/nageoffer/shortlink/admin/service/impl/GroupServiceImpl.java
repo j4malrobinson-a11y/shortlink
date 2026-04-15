@@ -2,6 +2,7 @@ package com.nageoffer.shortlink.admin.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.nageoffer.shortlink.admin.common.biz.user.UserContext;
 import com.nageoffer.shortlink.admin.dao.entity.GroupDO;
 import com.nageoffer.shortlink.admin.dao.mapper.GroupMapper;
 import com.nageoffer.shortlink.admin.dto.resp.ShortLinkGroupListRespDTO;
@@ -23,6 +24,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
         }while (!hasGid(gid));
         GroupDO groupDO = new GroupDO();
         groupDO.setGid(gid);
+        groupDO.setUsername(UserContext.getUsername());
         groupDO.setName(groupName);
         groupDO.setSortOrder(0);
         baseMapper.insert(groupDO);
@@ -32,8 +34,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
     public List<ShortLinkGroupListRespDTO> listGroup() {
         //todo
         List<GroupDO> list = lambdaQuery().eq(GroupDO::getDelFlag, 0)
-//                .eq(GroupDO::getName,null)
-                .isNull(GroupDO::getUsername)
+                .eq(GroupDO::getUsername,UserContext.getUsername())
                 .orderByDesc(GroupDO::getSortOrder, GroupDO::getUpdateTime)
                 .list();
         return BeanUtil.copyToList(list, ShortLinkGroupListRespDTO.class);
@@ -41,8 +42,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
     private boolean hasGid(String gid) {
         GroupDO one = lambdaQuery().eq(GroupDO::getGid, gid)
-                //todo 设置用户名
-                .eq(GroupDO::getUsername, null)
+                .eq(GroupDO::getUsername, UserContext.getUsername())
                 .one();
         return one == null;
     }
