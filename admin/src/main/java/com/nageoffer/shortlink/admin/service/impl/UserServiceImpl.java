@@ -114,8 +114,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
             throw new ClientException("用户已登录");
         }
         String uuid = UUID.randomUUID().toString();
-        stringRedisTemplate.opsForValue().set(uuid, JSON.toJSONString(userDO),30L, TimeUnit.MINUTES);
-        stringRedisTemplate.opsForValue().set(requestparam.getUsername(),uuid,30L,TimeUnit.MINUTES);
+        stringRedisTemplate.opsForValue().set(uuid, JSON.toJSONString(userDO),30L, TimeUnit.DAYS);
+        stringRedisTemplate.opsForValue().set(requestparam.getUsername(),uuid,30L,TimeUnit.DAYS);
         return new UserLoginRespDTO (uuid);
     }
 
