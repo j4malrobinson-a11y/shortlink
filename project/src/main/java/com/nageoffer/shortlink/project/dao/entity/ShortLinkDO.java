@@ -75,6 +75,6 @@ public class ShortLinkDO extends BaseDO  {
     private String describe;
 
 
-
+    private String favicon;
 
 }

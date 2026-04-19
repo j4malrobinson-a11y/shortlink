@@ -1,21 +1,34 @@
-package com.nageoffer.shortlink.project.dto.req;
+package com.nageoffer.shortlink.project.dto.resp;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 
 import java.util.Date;
 
 @Data
-public class ShortLinkCreateReqDTO {
+public class ShortLinkPageRespDTO {
 
+    private Long id;
     /**
      * 域名
      */
     private String domain;
 
     /**
+     * 短链接
+     */
+    private String shortUri;
+
+    /**
+     * 完整短链接
+     */
+    private String fullShortUrl;
+
+    /**
      * 原始链接
      */
     private String originUrl;
+
 
 
     /**
@@ -42,6 +55,7 @@ public class ShortLinkCreateReqDTO {
     /**
      * 描述
      */
+    @TableField("`describe`")
     private String describe;
 
 
