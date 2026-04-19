@@ -39,7 +39,7 @@ public class UserController {
         return userRegisterCachePenetrationBloomFilter.contains(username);
     }
 
-    @PostMapping("/api/shortlink/v1/user")
+    @PostMapping("/api/shortlink/v1/user/register")
     public Result<Void> register(@RequestBody UserRegisterReqDTO requestParam){
         userService.register(requestParam);
         return Results.success();
