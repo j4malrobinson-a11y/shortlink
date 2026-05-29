@@ -1,6 +1,7 @@
 package com.nageoffer.shortlink.project.dto.resp;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.util.Date;
@@ -50,6 +51,7 @@ public class ShortLinkPageRespDTO {
     /**
      * 有效期
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GTM+8")
     private Date validDate;
 
     /**
@@ -60,4 +62,7 @@ public class ShortLinkPageRespDTO {
 
 
     private String favicon;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GTM+8")
+    private Date createTime;
 }

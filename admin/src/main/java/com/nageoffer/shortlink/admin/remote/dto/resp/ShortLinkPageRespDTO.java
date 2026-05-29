@@ -1,22 +1,35 @@
-package com.nageoffer.shortlink.project.dto.req;
+package com.nageoffer.shortlink.admin.remote.dto.resp;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.util.Date;
 
 @Data
-public class ShortLinkCreateReqDTO {
+public class ShortLinkPageRespDTO {
 
+    private Long id;
     /**
      * 域名
      */
     private String domain;
 
     /**
+     * 短链接
+     */
+    private String shortUri;
+
+    /**
+     * 完整短链接
+     */
+    private String fullShortUrl;
+
+    /**
      * 原始链接
      */
     private String originUrl;
+
 
 
     /**
@@ -38,14 +51,18 @@ public class ShortLinkCreateReqDTO {
     /**
      * 有效期
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GTM+8")
     private Date validDate;
 
     /**
      * 描述
      */
+    @TableField("`describe`")
     private String describe;
 
 
     private String favicon;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GTM+8")
+    private Date createTime;
 }

@@ -69,6 +69,9 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                     .set(GroupDO::getSortOrder,shortLinkGroupSortReqDTO.getSortOrder())
                     .update();
         }
+
+        Object o = new Object();
+        o.hashCode();
     }
 
     private boolean hasGid(String gid) {
