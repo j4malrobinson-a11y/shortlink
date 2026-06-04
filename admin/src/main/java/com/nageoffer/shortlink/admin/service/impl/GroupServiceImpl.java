@@ -3,21 +3,31 @@ package com.nageoffer.shortlink.admin.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.nageoffer.shortlink.admin.common.biz.user.UserContext;
+import com.nageoffer.shortlink.admin.common.convention.result.Result;
 import com.nageoffer.shortlink.admin.dao.entity.GroupDO;
 import com.nageoffer.shortlink.admin.dao.mapper.GroupMapper;
 import com.nageoffer.shortlink.admin.dto.req.ShortLinkGroupSortReqDTO;
 import com.nageoffer.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.nageoffer.shortlink.admin.dto.resp.ShortLinkGroupListRespDTO;
+import com.nageoffer.shortlink.admin.remote.dto.resp.ShortLinkGroupCountQueryRespDTO;
+import com.nageoffer.shortlink.admin.remote.service.ShortLinkRemoteService;
 import com.nageoffer.shortlink.admin.service.GroupService;
 import com.nageoffer.shortlink.admin.util.RandomUtil;
 import groovy.util.logging.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
+@RequiredArgsConstructor
 @Service
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
+
+    private final ShortLinkRemoteService shortLinkRemoteService;
 
     public void saveGroup(String groupName) {
         String gid;
@@ -39,7 +49,27 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                 .eq(GroupDO::getUsername,UserContext.getUsername())
                 .orderByDesc(GroupDO::getSortOrder, GroupDO::getUpdateTime)
                 .list();
-        return BeanUtil.copyToList(list, ShortLinkGroupListRespDTO.class);
+        if (list==null) {
+            return Collections.emptyList();
+        }
+        List<String> gids = list.stream().map(GroupDO::getGid).toList();
+        Result<List<ShortLinkGroupCountQueryRespDTO>> shortLinkGroupCountResult = shortLinkRemoteService.listGroupShortLinkCount(gids);
+        List<ShortLinkGroupCountQueryRespDTO> shortLinkGroupCount = shortLinkGroupCountResult.getData();
+
+        Map<String, Integer> countMap = (shortLinkGroupCount == null || shortLinkGroupCount.isEmpty())
+                ? Collections.emptyMap()
+                : shortLinkGroupCount.stream()
+                .collect(Collectors.toMap(
+                        ShortLinkGroupCountQueryRespDTO::getGid,
+                        ShortLinkGroupCountQueryRespDTO::getShortLinkGroupCount
+                ));
+        List<ShortLinkGroupListRespDTO> shortLinkGroupListRespDTOS = BeanUtil.copyToList(list, ShortLinkGroupListRespDTO.class);
+        shortLinkGroupListRespDTOS.forEach(group ->
+                group.setShortLinkCount(
+                        countMap.getOrDefault(group.getGid(), 0)
+                )
+        );
+        return shortLinkGroupListRespDTOS;
     }
 
     @Override

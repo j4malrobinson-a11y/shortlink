@@ -9,6 +9,7 @@ import com.nageoffer.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.nageoffer.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.nageoffer.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
+import com.nageoffer.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.nageoffer.shortlink.project.service.ShortLinkService;
 import com.nageoffer.shortlink.project.util.HashUtil;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -56,6 +59,23 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .orderByDesc(ShortLinkDO::getCreateTime)
                 .page(requestparam);
         return page.convert(shortLinkDO -> BeanUtil.toBean(shortLinkDO,ShortLinkPageRespDTO.class));
+    }
+
+    @Override
+    public List<ShortLinkGroupCountQueryRespDTO> countByGids(List<String> gids) {
+        return gids.stream()
+                .map(gid -> {
+                    ShortLinkGroupCountQueryRespDTO result = new ShortLinkGroupCountQueryRespDTO();
+                    result.setGid(gid);
+                    result.setShortLinkGroupCount(Math.toIntExact(
+                            lambdaQuery()
+                                    .eq(ShortLinkDO::getGid, gid)
+                                    .eq(ShortLinkDO::getDelFlag, 0)
+                                    .count()
+                    ));
+                    return result;
+                })
+                .toList();
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestparam) {
