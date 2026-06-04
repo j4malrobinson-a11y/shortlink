@@ -22,11 +22,26 @@ rules:
             shardingColumn: username
             # 分片算法，将数据路由到16张分表中
             shardingAlgorithmName: t_user_table_sharding_algorithm
+      t_group:
+        # 实际数据节点，表示t_user表的数据分布在ds_0.t_user_0到ds_0.t_user_15这16张表中
+        actualDataNodes: ds_0.t_group_${0..15}
 
+        # 分表策略
+        tableStrategy:
+          standard:
+            # 分片键，这里使用username的hashcode进行分片
+            shardingColumn: username
+            # 分片算法，将数据路由到16张分表中
+            shardingAlgorithmName: t_group_table_sharding_algorithm
     # 配置分片算法
     shardingAlgorithms:
       # t_user表的分表算法
       t_user_table_sharding_algorithm:
+        type: HASH_MOD
+        props:
+          # 分片数量，对应16张表
+          sharding-count: '16'
+      t_group_table_sharding_algorithm:
         type: HASH_MOD
         props:
           # 分片数量，对应16张表

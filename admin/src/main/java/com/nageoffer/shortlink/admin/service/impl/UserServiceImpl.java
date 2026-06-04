@@ -15,6 +15,7 @@ import com.nageoffer.shortlink.admin.dto.req.UserRegisterReqDTO;
 import com.nageoffer.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.nageoffer.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.nageoffer.shortlink.admin.dto.resp.UserRespDTO;
+import com.nageoffer.shortlink.admin.service.GroupService;
 import com.nageoffer.shortlink.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
@@ -43,6 +44,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     private final RedissonClient redissonClient;
 
     private final StringRedisTemplate stringRedisTemplate;
+
+    private final GroupService groupService;
 
     @Override
     public UserRespDTO getUserByUserName(String username) {
@@ -79,6 +82,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                         throw new ClientException(USER_SAVE_ERROR);
                     }
                     userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
+                    groupService.saveGroup("默认分组");
                 } else {
                     // 获取锁失败，说明其他线程正在注册相同的用户名
                     throw new ClientException(USER_NAME_EXIT);
