@@ -30,13 +30,28 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
     private final ShortLinkRemoteService shortLinkRemoteService;
 
     public void saveGroup(String groupName) {
+//        String gid;
+//        do{
+//            gid = RandomUtil.generateRandomString(6);
+//        }while (!hasGid(gid));
+//        GroupDO groupDO = new GroupDO();
+//        groupDO.setGid(gid);
+//        groupDO.setUsername(UserContext.getUsername());
+//        groupDO.setName(groupName);
+//        groupDO.setSortOrder(0);
+//        baseMapper.insert(groupDO);
+        saveGroup(UserContext.getUsername(),groupName);
+    }
+
+    @Override
+    public void saveGroup(String userName, String groupName) {
         String gid;
         do{
             gid = RandomUtil.generateRandomString(6);
-        }while (!hasGid(gid));
+        }while (!hasGid(userName,gid));
         GroupDO groupDO = new GroupDO();
         groupDO.setGid(gid);
-        groupDO.setUsername(UserContext.getUsername());
+        groupDO.setUsername(userName);
         groupDO.setName(groupName);
         groupDO.setSortOrder(0);
         baseMapper.insert(groupDO);
@@ -104,9 +119,9 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
         o.hashCode();
     }
 
-    private boolean hasGid(String gid) {
+    private boolean hasGid(String userName,String gid) {
         GroupDO one = lambdaQuery().eq(GroupDO::getGid, gid)
-                .eq(GroupDO::getUsername, UserContext.getUsername())
+                .eq(GroupDO::getUsername, userName)
                 .one();
         return one == null;
     }
