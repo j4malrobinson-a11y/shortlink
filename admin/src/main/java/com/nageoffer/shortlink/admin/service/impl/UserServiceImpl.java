@@ -82,7 +82,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                         throw new ClientException(USER_SAVE_ERROR);
                     }
                     userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
-                    groupService.saveGroup("默认分组");
+                    groupService.saveGroup(requestParam.getUsername(),"默认分组");
                 } else {
                     // 获取锁失败，说明其他线程正在注册相同的用户名
                     throw new ClientException(USER_NAME_EXIT);

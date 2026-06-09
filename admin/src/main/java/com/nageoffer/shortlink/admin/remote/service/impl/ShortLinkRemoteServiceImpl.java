@@ -4,7 +4,6 @@ import com.nageoffer.shortlink.admin.remote.service.ShortLinkRemoteService;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ShortLinkRemoteServiceImpl
-        implements ShortLinkRemoteService {
+public class ShortLinkRemoteServiceImpl implements ShortLinkRemoteService {
 
 }

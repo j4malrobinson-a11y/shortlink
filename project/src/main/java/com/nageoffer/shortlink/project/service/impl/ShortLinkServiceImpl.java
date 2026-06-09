@@ -1,23 +1,30 @@
 package com.nageoffer.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.nageoffer.shortlink.project.common.convention.exception.ServiceException;
 import com.nageoffer.shortlink.project.dao.entity.ShortLinkDO;
+import com.nageoffer.shortlink.project.dao.entity.ShortLinkGotoDO;
+import com.nageoffer.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.nageoffer.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.nageoffer.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.nageoffer.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import com.nageoffer.shortlink.project.dto.req.ShortLinkUpdateReq;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.nageoffer.shortlink.project.service.ShortLinkService;
 import com.nageoffer.shortlink.project.util.HashUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -25,6 +32,8 @@ import java.util.List;
 public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLinkDO> implements ShortLinkService {
 
     private final RBloomFilter<String> shortUriCreateCachePenetrationBloomFilter;
+
+    private final ShortLinkGotoMapper shortLinkGotoMapper;
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestparam) {
@@ -34,8 +43,12 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String fullShortUrl = requestparam.getDomain() + "/" + shortUri;
         shortLinkDO.setFullShortUrl(fullShortUrl);
         shortLinkDO.setEnableStatus(0);
+        ShortLinkGotoDO shortLinkGotoDO = new ShortLinkGotoDO();
+        shortLinkGotoDO.setFullShortUrl(fullShortUrl);
+        shortLinkGotoDO.setGid(requestparam.getGid());
         try {
             baseMapper.insert(shortLinkDO);
+            shortLinkGotoMapper.insert(shortLinkGotoDO);
         } catch (DuplicateKeyException ex) {
             ShortLinkDO hasShortLinkDO = lambdaQuery().eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
                     .one();
@@ -76,6 +89,43 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     return result;
                 })
                 .toList();
+    }
+
+    @Override
+    public void updateShortLink(ShortLinkUpdateReq requestparam) {
+
+        //todo
+//        lambdaUpdate().eq(ShortLinkDO::getFullShortUrl,requestparam.getFullShortUrl())
+//                .eq(ShortLinkDO::getGid,requestparam.getOriginGid())
+//                .eq(ShortLinkDO::getDelFlag,0)
+//                .eq(ShortLinkDO::getEnableStatus,0)
+//                .set()
+
+    }
+
+    @Override
+    public void restoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String fullShortUrl = request.getServerName() +"/"+ shortUri;
+
+        ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(
+                new LambdaQueryWrapper<ShortLinkGotoDO>()
+                        .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl)
+        );
+        if (shortLinkGotoDO == null) {
+            return ;
+        }
+        ShortLinkDO shortLinkDO = lambdaQuery().eq(ShortLinkDO::getGid, shortLinkGotoDO.getGid())
+                .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
+                .eq(ShortLinkDO::getDelFlag,0)
+                .eq(ShortLinkDO::getEnableStatus,0)
+                .one();
+        if (shortLinkDO != null) {
+            response.sendRedirect(shortLinkDO.getOriginUrl());
+        }
+
+        shortUriCreateCachePenetrationBloomFilter.contains(fullShortUrl);
+
+
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestparam) {

@@ -1,10 +1,13 @@
 package com.nageoffer.shortlink.project.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.nageoffer.shortlink.project.common.convention.result.Result;
 import com.nageoffer.shortlink.project.common.convention.result.Results;
 import com.nageoffer.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.nageoffer.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import com.nageoffer.shortlink.project.dto.req.ShortLinkUpdateReq;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -12,6 +15,7 @@ import com.nageoffer.shortlink.project.service.ShortLinkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -34,5 +38,16 @@ public class ShortLinkController {
     public Result<List<ShortLinkGroupCountQueryRespDTO>> countByGids(@RequestParam List<String> gids) {
         // SELECT gid, COUNT(*) FROM t_link WHERE gid IN (...) AND del_flag = 0 GROUP BY gid
         return Results.success(shortLinkService.countByGids(gids));
+    }
+
+    @PutMapping("/api/shortlink/v1/update")
+    public Result<Void> updateShortLink(@RequestBody ShortLinkUpdateReq requestparam) {
+        shortLinkService.updateShortLink(requestparam);
+        return Results.success();
+    }
+
+    @GetMapping("/{shortUri}")
+    public void restoreUrl(@PathVariable String shortUri, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        shortLinkService.restoreUrl(shortUri,request,response);
     }
 }
