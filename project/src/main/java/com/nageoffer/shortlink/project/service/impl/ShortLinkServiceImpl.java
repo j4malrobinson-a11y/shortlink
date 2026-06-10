@@ -18,6 +18,7 @@ import com.nageoffer.shortlink.project.dto.resp.ShortLinkGroupCountQueryRespDTO;
 import com.nageoffer.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.nageoffer.shortlink.project.service.ShortLinkService;
 import com.nageoffer.shortlink.project.util.HashUtil;
+import com.nageoffer.shortlink.project.util.LinkUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jodd.util.StringUtil;
@@ -67,6 +68,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
         }
         shortUriCreateCachePenetrationBloomFilter.add(fullShortUrl);
+        stringRedisTemplate.opsForValue().set(String.format(RedisKeyConstant.LOCK_GOTO_SHORT_LINK_KEY, fullShortUrl),
+                requestparam.getOriginUrl(),
+                LinkUtil.getCacheValidTime(requestparam.getValidDate()),
+                TimeUnit.MILLISECONDS);
         ShortLinkCreateRespDTO shortLinkCreateRespDTO = new ShortLinkCreateRespDTO();
         shortLinkCreateRespDTO.setFullShortUrl(fullShortUrl);
         shortLinkCreateRespDTO.setGid(requestparam.getGid());
