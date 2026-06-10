@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.nageoffer.shortlink.project.common.constant.RedisKeyConstant;
 import com.nageoffer.shortlink.project.common.convention.exception.ServiceException;
 import com.nageoffer.shortlink.project.dao.entity.ShortLinkDO;
 import com.nageoffer.shortlink.project.dao.entity.ShortLinkGotoDO;
@@ -19,13 +20,18 @@ import com.nageoffer.shortlink.project.service.ShortLinkService;
 import com.nageoffer.shortlink.project.util.HashUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jodd.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +40,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final RBloomFilter<String> shortUriCreateCachePenetrationBloomFilter;
 
     private final ShortLinkGotoMapper shortLinkGotoMapper;
+
+    private final StringRedisTemplate stringRedisTemplate;
+
+    private final RedissonClient redissonClient;
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestparam) {
@@ -104,27 +114,83 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     }
 
     @Override
+    /**
+     * 短链接跳转
+     *
+     * @param shortUri 短链接后缀
+     * @param request 请求对象
+     * @param response 响应对象
+     */
     public void restoreUrl(String shortUri, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String fullShortUrl = request.getServerName() +"/"+ shortUri;
-
-        ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(
-                new LambdaQueryWrapper<ShortLinkGotoDO>()
-                        .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl)
-        );
-        if (shortLinkGotoDO == null) {
-            return ;
+        // 拼接完整短链接，例如 nurl.ink/abc123
+        String fullShortUrl = request.getServerName() + "/" + shortUri;
+        // ==================== 一级查询：Redis缓存 ====================
+        // 从 Redis 中获取对应的原始链接
+        String originalLink = stringRedisTemplate.opsForValue()
+                .get(String.format(RedisKeyConstant.GOTO_SHORT_LINK_KEY, fullShortUrl));
+        // 缓存命中，直接重定向
+        if (StringUtil.isNotBlank(originalLink)) {
+            response.sendRedirect(originalLink);
+            return;
         }
-        ShortLinkDO shortLinkDO = lambdaQuery().eq(ShortLinkDO::getGid, shortLinkGotoDO.getGid())
-                .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
-                .eq(ShortLinkDO::getDelFlag,0)
-                .eq(ShortLinkDO::getEnableStatus,0)
-                .one();
-        if (shortLinkDO != null) {
-            response.sendRedirect(shortLinkDO.getOriginUrl());
+        boolean contains = shortUriCreateCachePenetrationBloomFilter.contains(fullShortUrl);
+        if (!contains) {
+            return;
         }
-
-        shortUriCreateCachePenetrationBloomFilter.contains(fullShortUrl);
-
+        // ==================== 二级查询：加分布式锁防止缓存击穿 ====================
+        // 获取 Redisson 分布式锁，同一个短链接只允许一个线程查询数据库
+        RLock lock = redissonClient.getLock(
+                String.format(RedisKeyConstant.LOCK_GOTO_SHORT_LINK_KEY, fullShortUrl));
+        // 加锁
+        lock.lock();
+        try {
+            String isNUll = stringRedisTemplate.opsForValue().get(String.format(RedisKeyConstant.GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl));
+            if (StringUtil.isNotBlank(isNUll)) {
+                return;
+            }
+            // ===== 双重检查 =====
+            // 防止当前线程等待锁期间，其他线程已经将数据写入缓存
+            originalLink = stringRedisTemplate.opsForValue()
+                    .get(String.format(RedisKeyConstant.GOTO_SHORT_LINK_KEY, fullShortUrl));
+            // 如果已经存在缓存，则直接重定向
+            if (StringUtil.isNotBlank(originalLink)) {
+                response.sendRedirect(originalLink);
+                return;
+            }
+            // ==================== 查询跳转表 ====================
+            // 根据完整短链接查询 gid
+            ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(
+                    new LambdaQueryWrapper<ShortLinkGotoDO>()
+                            .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl)
+            );
+            // 数据不存在，说明短链接不存在
+            if (shortLinkGotoDO == null) {
+                stringRedisTemplate.opsForValue().set(String.format(RedisKeyConstant.GOTO_IS_NULL_SHORT_LINK_KEY,fullShortUrl),"-",30, TimeUnit.MINUTES );
+                return;
+            }
+            // ==================== 查询短链接主表 ====================
+            // 根据 gid 和完整短链接查询原始链接
+            // 并判断：
+            // 1. del_flag = 0（未删除）
+            // 2. enable_status = 0（启用状态）
+            ShortLinkDO shortLinkDO = lambdaQuery()
+                    .eq(ShortLinkDO::getGid, shortLinkGotoDO.getGid())
+                    .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
+                    .eq(ShortLinkDO::getDelFlag, 0)
+                    .eq(ShortLinkDO::getEnableStatus, 0)
+                    .one();
+            // 查询成功
+            if (shortLinkDO != null) {
+                // 获取原始长链接
+                originalLink = shortLinkDO.getOriginUrl();
+                stringRedisTemplate.opsForValue().set(String.format(RedisKeyConstant.GOTO_SHORT_LINK_KEY,fullShortUrl),originalLink);
+                // 重定向到原始链接
+                response.sendRedirect(originalLink);
+            }
+        } finally {
+            // 释放分布式锁
+            lock.unlock();
+        }
 
     }
 
